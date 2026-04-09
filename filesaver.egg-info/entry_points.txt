@@ -1,0 +1,2 @@
+[console_scripts]
+filesaver = filesaver.cli:main
