@@ -1,6 +1,0 @@
-Metadata-Version: 2.4
-Name: filesaver
-Version: 0.1.0
-Summary: Git in plain English — save, undo, switch storylines
-Requires-Python: >=3.10
-Requires-Dist: rich>=13.0

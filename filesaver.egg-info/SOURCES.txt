@@ -1,9 +1,0 @@
-pyproject.toml
-filesaver/__init__.py
-filesaver/cli.py
-filesaver.egg-info/PKG-INFO
-filesaver.egg-info/SOURCES.txt
-filesaver.egg-info/dependency_links.txt
-filesaver.egg-info/entry_points.txt
-filesaver.egg-info/requires.txt
-filesaver.egg-info/top_level.txt
