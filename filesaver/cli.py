@@ -1,5 +1,8 @@
 import subprocess
 import sys
+import urllib.request
+import urllib.error
+import json
 from datetime import datetime
 from rich.console import Console
 from rich.table import Table
@@ -19,16 +22,61 @@ def run(command: str, capture: bool = False):
 
 # ─── helper: timestamp string for auto-named saves ────────────────────────────
 def timestamp():
-    return datetime.now().strftime("save @ %-I:%M%p").lower()  # e.g. save @ 3:42pm
+    now = datetime.now()
+    t = now.strftime("%I:%M%p").lstrip("0").lower()
+    return f"save @ {t}"
+
+# ─── helper: ask Ollama/Mistral to generate a commit message from the diff ────
+def ai_commit_message():
+    run("git add .")
+    diff = run("git diff --cached", capture=True)
+    if not diff:
+        return None
+
+    prompt = (
+        "Write a single short git commit message (max 10 words, no quotes, no explanation, "
+        "no markdown) describing these code changes:\n\n"
+        + diff[:3000]
+    )
+
+    payload = json.dumps({
+        "model": "mistral",
+        "prompt": prompt,
+        "stream": False
+    }).encode("utf-8")
+
+    try:
+        req = urllib.request.Request(
+            "http://localhost:11434/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=120) as response:
+            result = json.loads(response.read().decode("utf-8"))
+            message = result.get("response", "").strip().strip('"').strip("'")
+            return message if message else None
+    except urllib.error.URLError:
+        console.print("[yellow]⚠ Ollama not running, using timestamp instead.[/yellow]")
+        return None
 
 # ─── parse the sentence the user typed and route to the right action ──────────
 def parse_and_run(words: list[str]):
 
     sentence = " ".join(words).lower().strip()
+    # ── save only a specific file ─────────────────────────────────────────────
+    if "save only" in sentence or "add only" in sentence:
+        for keyword in ["save only", "add only"]:
+            if keyword in sentence:
+                filename = sentence.split(keyword, 1)[-1].strip()
+                break
+        run(f"git add {filename}")
+        run(f'git commit -m "saved {filename}"')
+        console.print(f"[bold green]✔ Saved:[/bold green] {filename}")
+        return
 
     # ── make a copy / save ────────────────────────────────────────────────────
-    if any(phrase in sentence for phrase in ["make a copy", "save", "make a save"]):
-        # check if user gave a description after the keyword
+    if any(phrase in sentence for phrase in ["make a copy", "save", "make a save"]) and "list" not in sentence:
         description = None
         for phrase in ["make a copy", "make a save", "save"]:
             if phrase in sentence:
@@ -36,22 +84,27 @@ def parse_and_run(words: list[str]):
                 if after:
                     description = after
                 break
-        label = description if description else timestamp()
-        run("git add .")
-        run(f'git commit -m "{label}"')
+
+        if description:
+            label = description
+            run("git add .")
+            run(f'git commit -m "{label}"')
+        else:
+            console.print("[dim]Asking Mistral to describe your changes...[/dim]")
+            label = ai_commit_message() or timestamp()
+            run(f'git commit -m "{label}"')
+
         console.print(f"[bold green]✔ Saved:[/bold green] {label}")
         return
 
     # ── make a new storyline ──────────────────────────────────────────────────
     if any(phrase in sentence for phrase in ["new storyline", "new story"]):
-        # extract branch name — everything after "called" or "named" or last word
         name = None
         for keyword in ["called", "named"]:
             if keyword in sentence:
                 name = sentence.split(keyword, 1)[-1].strip().replace(" ", "-")
                 break
         if not name:
-            # fall back to last word of sentence
             name = words[-1].replace(" ", "-")
         run(f"git checkout -b {name}")
         console.print(f"[bold cyan]✔ New storyline started:[/bold cyan] {name}")
@@ -148,7 +201,13 @@ def parse_and_run(words: list[str]):
         console.print("[bold yellow]✔ All unsaved changes discarded.[/bold yellow]")
         return
 
-    # ── help ──────────────────────────────────────────────────────────────────
+    # ── initialize / git init ─────────────────────────────────────────────────
+    if any(phrase in sentence for phrase in ["start tracking", "new project", "initialize", "init"]):
+        run("git init")
+        console.print("[bold green]✔ Started tracking this folder.[/bold green]")
+        return
+
+    # ── help    ──────────────────────────────────────────────────────────────────
     if any(phrase in sentence for phrase in ["help", "what can you do", "commands"]):
         show_help()
         return
@@ -164,19 +223,19 @@ def show_help():
     table.add_column("What it does")
 
     rows = [
-        ("filesaver make a copy",                 "Save current state (auto-timestamped)"),
-        ("filesaver make a copy fixed login bug",  "Save with your description"),
-        ("filesaver give me the list of saves",    "Show all your saves"),
-        ("filesaver go back to last save",         "Undo the last save"),
-        ("filesaver what changed",                 "Show what's different since last save"),
-        ("filesaver current state",                "Show unsaved files + current storyline"),
-        ("filesaver discard changes",              "Throw away all unsaved changes"),
-        ("filesaver upload my saves",              "Push to remote"),
-        ("filesaver get latest saves",             "Pull from remote"),
-        ("filesaver make a new storyline called X","Create a new branch called X"),
-        ("filesaver switch to X",                  "Switch to storyline X"),
-        ("filesaver list storylines",              "Show all your storylines"),
-        ("filesaver merge X",                      "Merge storyline X into current"),
+        ("filesaver make a copy",                  "AI reads your changes and writes the commit message"),
+        ("filesaver make a copy fixed login bug",   "Save with your own description"),
+        ("filesaver give me the list of saves",     "Show all your saves"),
+        ("filesaver go back to last save",          "Undo the last save"),
+        ("filesaver what changed",                  "Show what's different since last save"),
+        ("filesaver current state",                 "Show unsaved files + current storyline"),
+        ("filesaver discard changes",               "Throw away all unsaved changes"),
+        ("filesaver upload my saves",               "Push to remote"),
+        ("filesaver get latest saves",              "Pull from remote"),
+        ("filesaver make a new storyline called X", "Create a new branch called X"),
+        ("filesaver switch to X",                   "Switch to storyline X"),
+        ("filesaver list storylines",               "Show all your storylines"),
+        ("filesaver merge X",                       "Merge storyline X into current"),
     ]
     for what, does in rows:
         table.add_row(what, does)
