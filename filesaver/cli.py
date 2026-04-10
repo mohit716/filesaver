@@ -64,6 +64,40 @@ def ai_commit_message():
 def parse_and_run(words: list[str]):
 
     sentence = " ".join(words).lower().strip()
+
+    # ── upload / push — must come before save ────────────────────────────────
+    if any(phrase in sentence for phrase in ["upload", "push", "send my"]):
+        run("git push")
+        console.print("[bold green]✔ Saves uploaded.[/bold green]")
+        return
+
+    # ── get latest / pull — must come before save ────────────────────────────
+    if any(phrase in sentence for phrase in ["get latest", "download", "get updates", "pull"]):
+        run("git pull")
+        console.print("[bold green]✔ Got the latest saves.[/bold green]")
+        return
+
+    # ── list saves / history — must come before save ──────────────────────────
+    if any(phrase in sentence for phrase in ["list of saves", "show saves", "my saves", "list saves", "show history"]):
+        output = run("git log --oneline --decorate -15", capture=True)
+        if not output:
+            console.print("[yellow]No saves yet.[/yellow]")
+            return
+        table = Table(title="Your Saves", show_header=True, header_style="bold magenta")
+        table.add_column("ID", style="dim", width=10)
+        table.add_column("Description")
+        for line in output.splitlines():
+            parts = line.split(" ", 1)
+            table.add_row(parts[0], parts[1] if len(parts) > 1 else "")
+        console.print(table)
+        return
+
+    # ── go back to last save — must come before save ──────────────────────────
+    if any(phrase in sentence for phrase in ["go back", "undo", "last save", "revert"]):
+        run("git reset --soft HEAD~1")
+        console.print("[bold yellow]↩ Went back to the previous save.[/bold yellow]")
+        return
+
     # ── save only a specific file ─────────────────────────────────────────────
     if "save only" in sentence or "add only" in sentence:
         for keyword in ["save only", "add only"]:
@@ -76,7 +110,7 @@ def parse_and_run(words: list[str]):
         return
 
     # ── make a copy / save ────────────────────────────────────────────────────
-    if any(phrase in sentence for phrase in ["make a copy", "save", "make a save"]) and "list" not in sentence:
+    if any(phrase in sentence for phrase in ["make a copy", "make a save"]) or sentence.startswith("save"):
         description = None
         for phrase in ["make a copy", "make a save", "save"]:
             if phrase in sentence:
@@ -140,39 +174,6 @@ def parse_and_run(words: list[str]):
         console.print(f"[bold green]✔ Merged storyline:[/bold green] {name}")
         return
 
-    # ── list saves / history ──────────────────────────────────────────────────
-    if any(phrase in sentence for phrase in ["list of saves", "show saves", "my saves", "list saves", "show history"]):
-        output = run("git log --oneline --decorate -15", capture=True)
-        if not output:
-            console.print("[yellow]No saves yet.[/yellow]")
-            return
-        table = Table(title="Your Saves", show_header=True, header_style="bold magenta")
-        table.add_column("ID", style="dim", width=10)
-        table.add_column("Description")
-        for line in output.splitlines():
-            parts = line.split(" ", 1)
-            table.add_row(parts[0], parts[1] if len(parts) > 1 else "")
-        console.print(table)
-        return
-
-    # ── go back to last save ──────────────────────────────────────────────────
-    if any(phrase in sentence for phrase in ["go back", "undo", "last save", "revert"]):
-        run("git reset --soft HEAD~1")
-        console.print("[bold yellow]↩ Went back to the previous save.[/bold yellow]")
-        return
-
-    # ── upload saves / push ───────────────────────────────────────────────────
-    if any(phrase in sentence for phrase in ["upload", "push", "send my saves"]):
-        run("git push")
-        console.print("[bold green]✔ Saves uploaded.[/bold green]")
-        return
-
-    # ── get latest saves / pull ───────────────────────────────────────────────
-    if any(phrase in sentence for phrase in ["get latest", "download", "get updates", "pull"]):
-        run("git pull")
-        console.print("[bold green]✔ Got the latest saves.[/bold green]")
-        return
-
     # ── what changed ──────────────────────────────────────────────────────────
     if any(phrase in sentence for phrase in ["what changed", "show changes", "what did i change"]):
         output = run("git diff --stat HEAD", capture=True)
@@ -207,7 +208,7 @@ def parse_and_run(words: list[str]):
         console.print("[bold green]✔ Started tracking this folder.[/bold green]")
         return
 
-    # ── help    ──────────────────────────────────────────────────────────────────
+    # ── help ──────────────────────────────────────────────────────────────────
     if any(phrase in sentence for phrase in ["help", "what can you do", "commands"]):
         show_help()
         return
@@ -215,7 +216,6 @@ def parse_and_run(words: list[str]):
     # ── unrecognized ──────────────────────────────────────────────────────────
     console.print(f"[red]Hmm, I didn't understand:[/red] \"{' '.join(words)}\"")
     console.print("Try [bold]filesaver help[/bold] to see what you can say.")
-
 # ─── help screen ──────────────────────────────────────────────────────────────
 def show_help():
     table = Table(title="filesaver — what you can say", show_header=True, header_style="bold magenta")
