@@ -56,7 +56,7 @@ def ai_commit_message():
             result = json.loads(response.read().decode("utf-8"))
             message = result.get("response", "").strip().strip('"').strip("'")
             return message if message else None
-    except urllib.error.URLError:
+    except (urllib.error.URLError, TimeoutError):
         console.print("[yellow]⚠ Ollama not running, using timestamp instead.[/yellow]")
         return None
 
