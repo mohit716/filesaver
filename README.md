@@ -5,8 +5,10 @@ Stop memorizing git commands. Talk to your project like a human.
 ```bash
 filesaver make a copy
 filesaver give me the list of saves
+filesaver visit save 5a00ca9
+filesaver hide my changes
 filesaver make a new storyline called dark-mode
-filesaver go back to last save
+filesaver who changed main.py
 ```
 
 ---
@@ -33,22 +35,60 @@ filesaver make a copy
 
 ## ⚡ What You Can Say
 
+### Saving & History
+
 | Command | What it does |
 |---|---|
 | `filesaver make a copy` | AI generates commit message from your diff |
 | `filesaver make a copy fixed login bug` | Save with your own description |
-| `filesaver give me the list of saves` | Show commit history |
-| `filesaver go back to last save` | Undo last commit (keeps changes) |
-| `filesaver what changed` | Show diff since last save |
-| `filesaver current state` | Show unsaved files + current branch |
-| `filesaver upload my work` | Push to remote |
-| `filesaver get latest saves` | Pull from remote |
-| `filesaver make a new storyline called X` | Create new branch |
-| `filesaver switch to X` | Checkout branch |
-| `filesaver list storylines` | Show all branches |
 | `filesaver save only file.py` | Stage and commit a single file |
+| `filesaver give me the list of saves` | Show commit history |
+| `filesaver visit save 5a00ca9` | Jump to a specific save (use ID from list) |
+| `filesaver go back to last save` | Undo last commit (keeps changes) |
+
+### Viewing Changes
+
+| Command | What it does |
+|---|---|
+| `filesaver what changed` | Summary of changes since last save |
+| `filesaver show full diff` | Line-by-line changes (color-coded) |
+| `filesaver current state` | Show unsaved files + current storyline |
+| `filesaver who changed main.py` | See who edited each line of a file |
+
+### Stashing
+
+| Command | What it does |
+|---|---|
+| `filesaver hide my changes` | Stash changes for later |
+| `filesaver unhide my changes` | Restore stashed changes |
+| `filesaver discard changes` | Throw away all unsaved changes |
+
+### Storylines (Branches)
+
+| Command | What it does |
+|---|---|
+| `filesaver make a new storyline called X` | Create new branch |
+| `filesaver switch to X` | Switch to a storyline |
+| `filesaver list storylines` | Show all storylines |
+| `filesaver merge X` | Merge storyline X into current |
+| `filesaver delete storyline X` | Delete a storyline |
+
+### Syncing & Remote
+
+| Command | What it does |
+|---|---|
+| `filesaver upload my saves` | Push to remote |
+| `filesaver get latest saves` | Pull from remote |
+| `filesaver clone <url>` | Download a project from a URL |
+| `filesaver connect to <url>` | Link this project to a remote |
+| `filesaver show remote` | Show where project is connected |
+
+### Other
+
+| Command | What it does |
+|---|---|
+| `filesaver bookmark save as v1.0` | Tag / bookmark the current save |
 | `filesaver start tracking this folder` | git init |
-| `filesaver discard changes` | Discard all unstaged changes |
 
 ---
 
